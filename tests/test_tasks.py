@@ -1,10 +1,4 @@
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from datetime import date
-
 from tasks import (
     add_task,
     check_task_deadline,
@@ -12,6 +6,10 @@ from tasks import (
     find_task,
     sort_tasks,
 )
+import sys
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def test_add_task():

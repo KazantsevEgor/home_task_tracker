@@ -1,11 +1,11 @@
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from datetime import date
 
-from completions import cancel_completion, check_status, complete_task, is_task_completed
+from completions import (
+    cancel_completion,
+    check_status,
+    complete_task,
+    is_task_completed,
+)
 from tasks import add_task
 
 
