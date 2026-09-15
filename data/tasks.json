@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "name": "Убрать кухню",
+    "category": "Уборка",
+    "deadline": "2026-09-17",
+    "is_completed": false
+  },
+  {
+    "id": 2,
+    "name": "Купить продукты",
+    "category": "Покупки",
+    "deadline": "2026-09-20",
+    "is_completed": false
+  },
+  {
+    "id": 3,
+    "name": "Пропылесосить комнату",
+    "category": "Уборка",
+    "deadline": "2026-09-18",
+    "is_completed": false
+  }
+]
