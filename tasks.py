@@ -1,48 +1,49 @@
 from datetime import date
+from typing import Optional
+
+from models import Task
 
 
 def add_task(
-    tasks: list[dict],
+    tasks: list[Task],
     name: str,
     category: str,
     deadline: date,
 ) -> None:
-    """Добавить задачу в список tasks."""
-    task_id = max((t["id"] for t in tasks), default=0) + 1
-    tasks.append({
-        "id": task_id,
-        "name": name,
-        "category": category,
-        "deadline": str(deadline),
-        "is_completed": False,
-    })
+    task_id = max((t.id for t in tasks), default=0) + 1
+    tasks.append(Task(task_id, name, category, str(deadline)))
 
 
-def find_task(tasks: list[dict], query: str) -> list[dict]:
-    """Найти задачи по подстроке названия."""
-    return [t for t in tasks if query.lower() in t["name"].lower()]
+def find_task(tasks: list[Task], query: str) -> list[Task]:
+    return [t for t in tasks if query.lower() in t.name.lower()]
 
 
-def filter_tasks_by_category(tasks: list[dict], category: str):
-    """Отобрать задачи по категории (генератор)."""
+def filter_tasks_by_category(tasks: list[Task], category: str):
     for task in tasks:
-        if task["category"].lower() == category.lower():
+        if task.category.lower() == category.lower():
             yield task
 
 
-def sort_tasks(tasks: list[dict]) -> list[dict]:
-    """Отсортировать задачи по дедлайну."""
-    return sorted(tasks, key=lambda t: t["deadline"])
+def sort_tasks(tasks: list[Task]) -> list[Task]:
+    return sorted(tasks, key=lambda t: t.deadline)
 
 
 def check_task_deadline(
-    tasks: list[dict],
+    tasks: list[Task],
     task_id: int,
     days_left: int,
 ) -> bool:
-    """Проверить, осталось ли у задачи не менее days_left дней до дедлайна."""
     for task in tasks:
-        if task["id"] == task_id:
-            deadline = date.fromisoformat(task["deadline"])
-            return (deadline - date.today()).days >= days_left
+        if task.id == task_id:
+            return task.days_until_deadline() >= days_left
     return False
+
+
+def find_task_by_id(
+    tasks: list[Task],
+    task_id: int,
+) -> Optional[Task]:
+    for task in tasks:
+        if task.id == task_id:
+            return task
+    return None

@@ -1,42 +1,26 @@
-from datetime import date
+from models import Task
 
 
-def is_task_completed(tasks: list[dict], task_id: int) -> bool:
-    """Проверить, выполнена ли задача."""
+def is_task_completed(tasks: list[Task], task_id: int) -> bool:
     for task in tasks:
-        if task["id"] == task_id:
-            return task["is_completed"]
+        if task.id == task_id:
+            return task.is_completed
     return False
 
 
-def complete_task(tasks: list[dict], task_id: int) -> bool:
-    """Отметить задачу как выполненную.
-
-    Возвращает False, если задача уже выполнена.
-    """
+def complete_task(tasks: list[Task], task_id: int) -> bool:
     for task in tasks:
-        if task["id"] == task_id:
-            if task["is_completed"]:
+        if task.id == task_id:
+            if task.is_completed:
                 return False
-            task["is_completed"] = True
+            task.mark_completed()
             return True
     return False
 
 
-def cancel_completion(tasks: list[dict], task_id: int) -> bool:
-    """Снять отметку выполнения с задачи."""
+def cancel_completion(tasks: list[Task], task_id: int) -> bool:
     for task in tasks:
-        if task["id"] == task_id:
-            task["is_completed"] = False
+        if task.id == task_id:
+            task.cancel_completion()
             return True
     return False
-
-
-def check_status(is_completed: bool, deadline: date) -> str:
-    """Вернуть текстовый статус задачи."""
-    if is_completed:
-        return "Задача выполнена"
-    elif date.today() > deadline:
-        return "Задача просрочена"
-    else:
-        return "Задача в процессе"

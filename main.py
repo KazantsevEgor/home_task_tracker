@@ -1,6 +1,5 @@
-from datetime import date
-
-from completions import cancel_completion, check_status, complete_task
+from completions import cancel_completion, complete_task
+from models import Task
 from storage import load_tasks, save_tasks
 from tasks import add_task, filter_tasks_by_category, find_task, sort_tasks
 from utils import input_date, input_int
@@ -8,8 +7,7 @@ from utils import input_date, input_int
 TASKS_FILE = "data/tasks.json"
 
 
-def show_tasks(tasks: list[dict]) -> None:
-    """Вывести список задач в виде таблицы."""
+def show_tasks(tasks: list[Task]) -> None:
     if not tasks:
         print("Задач нет.")
         return
@@ -17,16 +15,13 @@ def show_tasks(tasks: list[dict]) -> None:
     print(f"\n{cols} Статус")
     print("-" * 72)
     for task in tasks:
-        deadline = date.fromisoformat(task["deadline"])
-        status = check_status(task["is_completed"], deadline)
         print(
-            f"{task['id']:<5} {task['name']:<25} "
-            f"{task['category']:<15} {task['deadline']:<12} {status}"
+            f"{task.id:<5} {task.name:<25} "
+            f"{task.category:<15} {task.deadline:<12} {task.get_status()}"
         )
 
 
 def main() -> None:
-    """Точка запуска приложения."""
     tasks = load_tasks(TASKS_FILE)
 
     while True:
@@ -46,12 +41,10 @@ def main() -> None:
             show_tasks(tasks)
         elif choice == 2:
             query = input("Подстрока названия: ")
-            results = find_task(tasks, query)
-            show_tasks(results)
+            show_tasks(find_task(tasks, query))
         elif choice == 3:
             category = input("Категория: ")
-            results = list(filter_tasks_by_category(tasks, category))
-            show_tasks(results)
+            show_tasks(list(filter_tasks_by_category(tasks, category)))
         elif choice == 4:
             show_tasks(sort_tasks(tasks))
         elif choice == 5:

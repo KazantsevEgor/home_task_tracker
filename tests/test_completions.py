@@ -1,12 +1,17 @@
-from datetime import date
+import os
+import sys
 
-from completions import (
+from datetime import date  # noqa: F401
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from models import Task  # noqa: E402
+from completions import (  # noqa: E402
     cancel_completion,
-    check_status,
     complete_task,
     is_task_completed,
 )
-from tasks import add_task
+from tasks import add_task  # noqa: E402
 
 
 def test_complete_task():
@@ -14,7 +19,7 @@ def test_complete_task():
     add_task(tasks, "Убрать кухню", "Уборка", date(2026, 9, 17))
     result = complete_task(tasks, 1)
     assert result is True
-    assert tasks[0]["is_completed"] is True
+    assert tasks[0].is_completed is True
 
 
 def test_complete_task_already_done():
@@ -30,7 +35,7 @@ def test_cancel_completion():
     add_task(tasks, "Убрать кухню", "Уборка", date(2026, 9, 17))
     complete_task(tasks, 1)
     cancel_completion(tasks, 1)
-    assert tasks[0]["is_completed"] is False
+    assert tasks[0].is_completed is False
 
 
 def test_is_task_completed_false():
@@ -46,16 +51,16 @@ def test_is_task_completed_true():
     assert is_task_completed(tasks, 1) is True
 
 
-def test_check_status_completed():
-    status = check_status(True, date(2026, 9, 17))
-    assert status == "Задача выполнена"
+def test_task_get_status_completed():
+    task = Task(1, "Убрать кухню", "Уборка", "2026-09-17", is_completed=True)
+    assert task.get_status() == "Задача выполнена"
 
 
-def test_check_status_overdue():
-    status = check_status(False, date(2020, 1, 1))
-    assert status == "Задача просрочена"
+def test_task_get_status_overdue():
+    task = Task(1, "Убрать кухню", "Уборка", "2020-01-01")
+    assert task.get_status() == "Задача просрочена"
 
 
-def test_check_status_in_progress():
-    status = check_status(False, date(2030, 1, 1))
-    assert status == "Задача в процессе"
+def test_task_get_status_in_progress():
+    task = Task(1, "Убрать кухню", "Уборка", "2030-01-01")
+    assert task.get_status() == "Задача в процессе"
