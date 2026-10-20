@@ -1,0 +1,26 @@
+<article class="card task-card mb-3">
+    <div class="card-body">
+        <h2 class="card-title h5">
+            {{ task.name|default:"Без названия" }}
+        </h2>
+
+        <p class="card-text">
+            Категория: {{ task.category }}
+        </p>
+
+        <p class="card-text">
+            Дедлайн: {{ task.deadline }}
+        </p>
+
+        <p class="card-text">
+            {% include "task_pages/includes/task_status.html" %}
+        </p>
+
+        <a
+            href="{% url 'tasks:detail' task.id %}"
+            class="btn btn-primary"
+        >
+            Подробнее
+        </a>
+    </div>
+</article>

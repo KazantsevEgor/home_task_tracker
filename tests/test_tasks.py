@@ -69,3 +69,21 @@ def test_check_task_deadline_sufficient():
 def test_check_task_deadline_not_found():
     tasks = []
     assert check_task_deadline(tasks, 99, 1) is False
+
+
+def test_is_overdue_true_for_past_deadline():
+    task = Task(1, "Задача", "Уборка", "2000-01-01")
+    assert task.is_overdue is True
+    assert task.get_status() == "Задача просрочена"
+
+
+def test_is_overdue_false_for_completed_task():
+    task = Task(1, "Задача", "Уборка", "2000-01-01", is_completed=True)
+    assert task.is_overdue is False
+    assert task.get_status() == "Задача выполнена"
+
+
+def test_is_overdue_false_for_future_deadline():
+    task = Task(1, "Задача", "Уборка", "2999-01-01")
+    assert task.is_overdue is False
+    assert task.get_status() == "Задача в процессе"

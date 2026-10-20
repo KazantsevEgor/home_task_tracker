@@ -1,0 +1,13 @@
+{% if task.is_completed %}
+    <span class="badge bg-success task-status task-status-completed">
+        Задача выполнена
+    </span>
+{% elif task.is_overdue %}
+    <span class="badge bg-danger task-status task-status-overdue">
+        Задача просрочена
+    </span>
+{% else %}
+    <span class="badge bg-warning text-dark task-status task-status-active">
+        Задача в процессе
+    </span>
+{% endif %}

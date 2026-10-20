@@ -24,10 +24,18 @@ class Task:
     def cancel_completion(self) -> None:
         self.is_completed = False
 
+    @property
+    def is_overdue(self) -> bool:
+        """Задача не выполнена, а дедлайн уже прошёл."""
+        return (
+            not self.is_completed
+            and date.today() > date.fromisoformat(self.deadline)
+        )
+
     def get_status(self) -> str:
         if self.is_completed:
             return "Задача выполнена"
-        elif date.today() > date.fromisoformat(self.deadline):
+        elif self.is_overdue:
             return "Задача просрочена"
         else:
             return "Задача в процессе"

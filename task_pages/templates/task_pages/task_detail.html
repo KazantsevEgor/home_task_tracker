@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if task %}
+        {{ task.name }} - Трекер домашних задач
+    {% else %}
+        Задача не найдена - Трекер домашних задач
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if task %}
+        <div class="card task-card">
+            <div class="card-body">
+                <h1 class="card-title h4">
+                    {{ task.name|default:"Без названия" }}
+                </h1>
+
+                <p class="card-text">
+                    <strong>ID:</strong> {{ task.id }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Категория:</strong> {{ task.category }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Дедлайн:</strong> {{ task.deadline }}
+                </p>
+
+                <p class="card-text">
+                    <strong>Статус:</strong>
+                    {% include "task_pages/includes/task_status.html" %}
+                </p>
+            </div>
+        </div>
+    {% else %}
+        <h1 class="text-danger">Задача не найдена</h1>
+        <p>Задача с указанным идентификатором отсутствует.</p>
+    {% endif %}
+
+    <a
+        href="{% url 'tasks:list' %}"
+        class="btn btn-outline-secondary mt-3"
+    >
+        &larr; к списку задач
+    </a>
+{% endblock %}

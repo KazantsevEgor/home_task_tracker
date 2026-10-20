@@ -123,6 +123,7 @@ task = Task(
 | `task.cancel_completion()` | `None` | Снимает отметку выполнения (`is_completed = False`) |
 | `task.get_status()` | `str` | Возвращает текстовый статус задачи |
 | `task.days_until_deadline()` | `int` | Количество дней до дедлайна (может быть отрицательным) |
+| `task.is_overdue` | `bool` | Свойство: задача не выполнена, а дедлайн уже прошёл (используется в шаблонах) |
 | `task.to_dict()` | `dict` | Преобразует объект в словарь для сохранения в JSON |
 | `Task.from_dict(data)` | `Task` | Создаёт объект `Task` из словаря (classmethod) |
 | `str(task)` | `str` | Строковое представление вида `[1] Убрать кухню (Уборка) — до 2026-10-15 — Задача в процессе` |
@@ -197,19 +198,59 @@ task = Task.from_dict(data)
 
 ## Веб-интерфейс
 
-Веб-версия реализована на Django 5.2 и отображает данные из `data/tasks.json` в браузере.
+Веб-версия реализована на Django 5.2. С ПР6 HTML-страницы формируются шаблонами Django (Django Template Language): view-функция получает данные из `data/tasks.json`, передаёт их в шаблон через контекст, а шаблон формирует HTML. Генерация HTML в Python-коде (функция `page()`) больше не используется.
+
+Данные по-прежнему хранятся в JSON; Django ORM, модели Django и формы пока не используются.
+
+```
+HTTP-запрос → URLconf → view → контекст → шаблон → HTML → HTTP-ответ
+```
 
 ### Страницы
 
-| URL | View-функция | Описание |
-|-----|-------------|----------|
-| `/` | `homepage.views.index` | Главная страница: описание приложения, кнопка-ссылка на задачи |
-| `/tasks/` | `task_pages.views.tasks` | Список всех задач с цветными статус-бейджами |
-| `/tasks/<int:task_id>/` | `task_pages.views.task_detail` | Карточка отдельной задачи |
+| URL | Имя маршрута | View-функция | Шаблон |
+|-----|--------------|-------------|--------|
+| `/` | `homepage:index` | `homepage.views.index` | `homepage/index.html` |
+| `/tasks/` | `tasks:list` | `task_pages.views.tasks` | `task_pages/task_list.html` |
+| `/tasks/<int:task_id>/` | `tasks:detail` | `task_pages.views.task_detail` | `task_pages/task_detail.html` |
 
-Если задача с указанным `task_id` не найдена, возвращается HTTP-ответ со статусом **404**.
+Если задача с указанным `task_id` не найдена, шаблон показывает сообщение «Задача не найдена», а HTTP-ответ имеет статус **404**.
+
+### Базовый шаблон и наследование
+
+Общая HTML-структура страниц находится в `templates/base.html`: объявление документа, подключение Bootstrap и собственного CSS, логотип, навигация, подвал и подключение JavaScript. Базовый шаблон определяет два блока, которые переопределяют дочерние страницы:
+
+```django
+{% block title %}...{% endblock %}
+{% block content %}...{% endblock %}
+```
+
+Дочерние шаблоны (`index.html`, `task_list.html`, `task_detail.html`) начинаются с `{% extends "base.html" %}` и содержат только содержимое страницы.
+
+### Включаемые шаблоны
+
+Повторяющиеся фрагменты вынесены в отдельные шаблоны и подключаются через `{% include %}`:
+
+| Шаблон | Где подключается |
+|--------|------------------|
+| `includes/navigation.html` | `base.html` |
+| `task_pages/includes/task_card.html` | `task_list.html` (в цикле по задачам) |
+| `task_pages/includes/task_status.html` | `task_card.html` и `task_detail.html` |
+
+### Контекст, циклы и условия
+
+View передаёт данные словарём контекста:
+
+```python
+context = {"tasks": tasks_list}
+return render(request, "task_pages/task_list.html", context)
+```
+
+В шаблоне используются `{% for task in tasks %}` с веткой `{% empty %}` для пустого списка и `{% if %}` для разных состояний данных: статус задачи (`task.is_completed`, `task.is_overdue`) и отсутствие задачи на странице 404.
 
 ### Цветовые бейджи статусов
+
+Бейдж формируется в `task_status.html`; условие опирается на состояние объекта `Task` (`is_completed`, свойство `is_overdue`).
 
 | Статус | Цвет Bootstrap |
 |--------|---------------|
@@ -217,30 +258,51 @@ task = Task.from_dict(data)
 | Задача просрочена | `bg-danger` (красный) |
 | Задача в процессе | `bg-warning text-dark` (жёлтый) |
 
-### Функция `page()` (`homepage/views.py`)
+### Фильтры шаблонов
 
-Формирует единый HTML-каркас для всех страниц:
-- `<!DOCTYPE html>` + `<html lang="ru">`;
-- метатег `charset=UTF-8`;
-- метатег `viewport` для адаптивности Bootstrap;
-- подключение Bootstrap 5.3 через CDN;
-- навигационная панель с ссылками на все разделы;
-- блок `<main class="container">` с содержимым страницы.
+Используются стандартные фильтры Django для представления данных:
 
-Используется всеми view-функциями: `index()`, `tasks()`, `task_detail()`.
+```django
+Всего задач: {{ tasks|length }}
+{{ task.name|default:"Без названия" }}
+```
+
+Фильтры не содержат бизнес-логики. Дедлайн хранится как строка `ГГГГ-ММ-ДД` и выводится без преобразования средствами шаблона.
+
+### Именованные URL и пространства имён
+
+В `urls.py` каждого приложения задан `app_name` и имена маршрутов. Ссылки в шаблонах формируются тегом `{% url %}`, жёстко заданные адреса не используются:
+
+```django
+{% url 'homepage:index' %}
+{% url 'tasks:list' %}
+{% url 'tasks:detail' task.id %}
+```
+
+### Статические файлы
+
+Статические файлы проекта находятся в `homepage/static/homepage/`:
+
+| Файл | Назначение | Где используется |
+|------|-----------|------------------|
+| `css/style.css` | Собственные стили (карточки, статусы, логотип, подвал) | `base.html`, `task_card.html`, `task_status.html` |
+| `js/main.js` | Выводит текущий год в подвале | `base.html` |
+| `img/logo.png` | Логотип | `base.html` |
+
+Подключение: `{% load static %}` в начале `base.html` и `{% static 'homepage/css/style.css' %}`. Bootstrap сохранён, но не заменяет собственный CSS.
 
 ### Маршрутизация URL
 
 ```
 tracker/urls.py
 ├── path('', include('homepage.urls'))       →  /
-│       homepage/urls.py
-│       └── path('', views.index)            →  / (главная)
+│       homepage/urls.py   (app_name = "homepage")
+│       └── path('', views.index, name='index')
 │
 └── path('tasks/', include('task_pages.urls')) → /tasks/...
-        task_pages/urls.py
-        ├── path('', views.tasks)             → /tasks/
-        └── path('<int:task_id>/', views.task_detail) → /tasks/1/
+        task_pages/urls.py (app_name = "tasks")
+        ├── path('', views.tasks, name='list')                    → /tasks/
+        └── path('<int:task_id>/', views.task_detail, name='detail') → /tasks/1/
 ```
 
 ---
@@ -286,27 +348,50 @@ home_task_tracker/
 ├── homepage/              — Django-приложение: главная страница
 │   ├── __init__.py
 │   ├── apps.py
-│   ├── views.py           — функции page() и index()
-│   └── urls.py            — маршрут /
+│   ├── views.py           — функция index() (render)
+│   ├── urls.py            — маршрут / (app_name = "homepage")
+│   ├── templates/
+│   │   └── homepage/
+│   │       └── index.html — главная страница (extends base.html)
+│   └── static/
+│       └── homepage/
+│           ├── css/style.css — собственные стили проекта
+│           ├── js/main.js    — вывод текущего года в подвале
+│           └── img/logo.png  — логотип
 │
 ├── task_pages/            — Django-приложение: страницы задач
 │   ├── __init__.py
 │   ├── apps.py
 │   ├── views.py           — функции tasks() и task_detail()
-│   └── urls.py            — маршруты /tasks/ и /tasks/<id>/
+│   ├── urls.py            — маршруты /tasks/ и /tasks/<id>/
+│   │                         (app_name = "tasks")
+│   └── templates/
+│       └── task_pages/
+│           ├── task_list.html    — список задач
+│           ├── task_detail.html  — страница отдельной задачи
+│           └── includes/
+│               ├── task_card.html   — карточка задачи
+│               └── task_status.html — бейдж статуса
+│
+├── templates/             — шаблоны уровня проекта
+│   ├── base.html          — базовый шаблон (блоки title и content)
+│   └── includes/
+│       └── navigation.html — навигация сайта
 │
 ├── data/
 │   └── tasks.json         — хранилище задач (JSON)
 │
 ├── tests/
-│   ├── test_tasks.py      — 8 тестов для функций tasks.py
-│   └── test_completions.py — 8 тестов для completions.py и Task
+│   ├── test_tasks.py      — тесты функций tasks.py и Task.is_overdue
+│   ├── test_completions.py — тесты completions.py и Task
+│   └── test_views.py      — тесты веб-страниц (тестовый клиент Django)
 │
 ├── reports/
 │   ├── отчет_ПР1.md
 │   ├── отчет_ПР2.md
 │   ├── отчет_ПР3.md
-│   └── отчет_ПР5.md
+│   ├── отчет_ПР5.md
+│   └── отчет_ПР6.md
 │
 ├── requirements.txt       — зависимости проекта
 ├── pyproject.toml         — конфигурация проекта
@@ -369,6 +454,8 @@ home_task_tracker/
 |-----------|--------|-----------|
 | Python | 3.14+ | Основной язык разработки |
 | Django | 5.2 | Веб-фреймворк |
+| Django Template Language | — | Шаблоны веб-страниц |
+| HTML5 / CSS3 / JavaScript | — | Разметка, собственное оформление, клиентское поведение |
 | Bootstrap | 5.3 | CSS-фреймворк для оформления страниц |
 | pytest | ≥ 8.0 | Автоматизированные тесты |
 | flake8 | ≥ 7.0 | Проверка соответствия кода стандарту PEP 8 |
@@ -456,22 +543,21 @@ pytest -v
 
 | Файл | Количество тестов | Что проверяется |
 |------|------------------|----------------|
-| `tests/test_tasks.py` | 8 | `add_task`, `find_task`, `filter_tasks_by_category`, `sort_tasks`, `check_task_deadline`, атрибуты объекта `Task` |
+| `tests/test_tasks.py` | 11 | `add_task`, `find_task`, `filter_tasks_by_category`, `sort_tasks`, `check_task_deadline`, свойство `task.is_overdue` |
 | `tests/test_completions.py` | 8 | `complete_task`, `cancel_completion`, `is_task_completed`, метод `task.get_status()` |
+| `tests/test_views.py` | 7 | веб-страницы через тестовый клиент Django: шаблоны, `{% url %}`, статические файлы, бейджи статусов, ответ 404 |
 
-**Итого: 16 тестов, все проходят.**
+**Итого: 26 тестов, все проходят.**
 
 Пример вывода:
 
 ```
 tests/test_completions.py::test_complete_task PASSED
 tests/test_completions.py::test_complete_task_already_done PASSED
-tests/test_completions.py::test_cancel_completion PASSED
 ...
-tests/test_tasks.py::test_add_task PASSED
-tests/test_tasks.py::test_add_task_id_increment PASSED
+tests/test_views.py::test_task_detail_not_found_returns_404 PASSED
 ...
-16 passed in 0.02s
+26 passed in 0.15s
 ```
 
 ---
@@ -533,6 +619,8 @@ flake8 . --extend-exclude=venv
 
 Настройки Django-проекта:
 - `INSTALLED_APPS` — зарегистрированы `homepage` и `task_pages`;
+- `TEMPLATES['DIRS'] = [BASE_DIR / 'templates']` — каталог шаблонов уровня проекта (`base.html`, `includes/`);
+  `APP_DIRS = True` — поиск шаблонов в каталогах приложений;
 - `LANGUAGE_CODE = 'ru-RU'` — русская локализация;
 - `TIME_ZONE = 'Europe/Moscow'` — московский часовой пояс;
 - `DATABASES` — SQLite для служебных нужд Django.
@@ -543,15 +631,14 @@ flake8 . --extend-exclude=venv
 
 ### `homepage/views.py`
 
-Содержит две функции:
-- `page(title, content)` — вспомогательная функция, формирует полный HTML-документ с Bootstrap 5.3 и навигацией; импортируется другими приложениями;
-- `index(request)` — главная страница с описанием и кнопкой перехода к задачам.
+- `index(request)` — вызывает `render(request, "homepage/index.html")`. Контекст не нужен: страница не выводит динамических данных.
 
 ### `task_pages/views.py`
 
-Содержит view-функции задач:
-- `tasks(request)` — загружает `list[Task]` из `data/tasks.json`, формирует список с цветными бейджами статусов;
-- `task_detail(request, task_id)` — находит задачу по ID через `find_task_by_id()`, отображает карточку; если не найдена — возвращает HTTP 404.
+- `tasks(request)` — загружает `list[Task]` из `data/tasks.json`, передаёт список в шаблон `task_pages/task_list.html` через контекст `{"tasks": ...}`;
+- `task_detail(request, task_id)` — находит задачу через `find_task_by_id()`, передаёт её в шаблон `task_pages/task_detail.html`; если задача не найдена, в контекст попадает `None`, шаблон показывает сообщение, а ответ получает статус **404**.
+
+HTML в `views.py` больше не формируется.
 
 ---
 
@@ -563,14 +650,25 @@ flake8 . --extend-exclude=venv
 - объектная модель (`Task`) с инкапсуляцией данных и методов;
 - JSON-хранилище с сериализацией/десериализацией объектов;
 - веб-интерфейс на Django: главная страница, список задач, карточка задачи;
-- цветовое оформление статусов через Bootstrap 5.3;
-- автоматизированные тесты (16 штук, все проходят);
+- Django Template Language: базовый шаблон `base.html`, наследование,
+  блоки, включаемые шаблоны, контекст, циклы и условия (ПР6);
+- именованные URL и пространства имён (`homepage`, `tasks`);
+- фильтры шаблонов (`length`, `default`);
+- собственные статические файлы: CSS, JavaScript, логотип;
+- функция `page()` и генерация HTML в Python удалены;
+- автоматизированные тесты (26 штук, все проходят);
 - соответствие кода стандарту PEP 8 (flake8).
+
+### Ограничения текущего этапа
+
+- данные по-прежнему хранятся в JSON (`data/tasks.json`);
+- Django ORM и база данных для задач не используются;
+- формы Django ещё не реализованы;
+- работа с базой данных относится к следующим практическим работам.
 
 ### Планируется
 
-- перенос `Task` в Django ORM и подключение полноценной базы данных;
-- переход с `HttpResponse` на шаблоны (`templates/`, функция `render()`);
+- хранение задач в базе данных и переход на Django ORM;
 - формы для создания, редактирования и удаления задач;
 - фильтрация и поиск задач в веб-интерфейсе;
 - авторизация пользователей;

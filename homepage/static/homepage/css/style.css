@@ -1,0 +1,35 @@
+body {
+    min-height: 100vh;
+    background-color: #f8f9fa;
+}
+
+.tracker-logo {
+    width: 72px;
+    height: auto;
+    margin: 1rem 0;
+}
+
+.task-card {
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.task-status {
+    font-weight: 600;
+}
+
+.task-status-completed {
+    letter-spacing: 0.02em;
+}
+
+.task-status-overdue {
+    text-transform: uppercase;
+}
+
+footer {
+    color: #6c757d;
+    border-top: 1px solid #dee2e6;
+    padding-top: 1rem;
+}
