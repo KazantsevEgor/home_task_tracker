@@ -19,5 +19,26 @@
     "category": "Уборка",
     "deadline": "2026-09-18",
     "is_completed": false
+  },
+  {
+    "id": 4,
+    "name": "Помыть окна",
+    "category": "Уборка",
+    "deadline": "2026-11-05",
+    "is_completed": false
+  },
+  {
+    "id": 5,
+    "name": "Починить кран",
+    "category": "Ремонт",
+    "deadline": "2026-11-15",
+    "is_completed": false
+  },
+  {
+    "id": 6,
+    "name": "Купить лампочки",
+    "category": "Покупки",
+    "deadline": "2026-10-30",
+    "is_completed": false
   }
 ]

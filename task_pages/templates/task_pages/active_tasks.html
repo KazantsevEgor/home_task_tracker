@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Активные задачи - Трекер домашних задач
+{% endblock %}
+
+{% block content %}
+    <h1>Активные задачи</h1>
+
+    <p>
+        Невыполненных задач: {{ tasks|length }}
+    </p>
+
+    {% for task in tasks %}
+        {% include "task_pages/includes/task_card.html" %}
+    {% empty %}
+        <p>Активных задач нет.</p>
+    {% endfor %}
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Статистика - Трекер домашних задач
+{% endblock %}
+
+{% block content %}
+    <h1>Статистика задач</h1>
+
+    <ul class="list-group mb-4">
+        <li class="list-group-item">
+            Всего задач: {{ summary.total_count }}
+        </li>
+        <li class="list-group-item">
+            Выполнено: {{ summary.completed_count }}
+        </li>
+        <li class="list-group-item">
+            Просрочено: {{ summary.overdue_count }}
+        </li>
+        <li class="list-group-item">
+            Ближайший дедлайн активной задачи:
+            {{ nearest_deadline|default:"нет активных задач" }}
+        </li>
+    </ul>
+
+    <h2 class="h4">Задачи по категориям</h2>
+
+    <table class="table statistics-table">
+        <thead>
+            <tr>
+                <th>Категория</th>
+                <th>Всего задач</th>
+                <th>Выполнено</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in by_category %}
+                <tr>
+                    <td>{{ item.category_name }}</td>
+                    <td>{{ item.tasks_count }}</td>
+                    <td>{{ item.completed_count }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="3">Данные отсутствуют.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2 class="h4">Категории с несколькими задачами</h2>
+
+    <ul>
+        {% for item in busy_categories %}
+            <li>{{ item.category_name }}: {{ item.tasks_count }}</li>
+        {% empty %}
+            <li>Таких категорий нет.</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

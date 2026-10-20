@@ -9,6 +9,21 @@
 
     <p>
         Всего задач: {{ tasks|length }}
+        {% if selected_category %}
+            (категория «{{ selected_category }}»)
+        {% endif %}
+    </p>
+
+    <p>
+        Категории:
+        <a href="{% url 'tasks:list' %}">Все</a>
+        {% for category in categories %}
+            | <a href="{% url 'tasks:list' %}?category={{ category.name|urlencode }}">{{ category.name }}</a>
+        {% endfor %}
+    </p>
+
+    <p>
+        <a href="{% url 'tasks:due' %}">Найти задачи по сроку</a>
     </p>
 
     {% for task in tasks %}

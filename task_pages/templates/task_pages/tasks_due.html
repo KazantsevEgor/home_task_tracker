@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Задачи по сроку - Трекер домашних задач
+{% endblock %}
+
+{% block content %}
+    <h1>Задачи по сроку</h1>
+
+    <p>
+        Выберите дату: будут показаны невыполненные задачи
+        со сроком не позже этой даты.
+    </p>
+
+    <form method="get" action="{% url 'tasks:due' %}" class="mb-4">
+        <label for="date">Дата:</label>
+        <input
+            type="date"
+            id="date"
+            name="date"
+            value="{{ due_date|default_if_none:'' }}"
+        >
+        <button type="submit" class="btn btn-primary btn-sm">Найти</button>
+    </form>
+
+    {% if invalid_date %}
+        <p class="text-danger">
+            Некорректная дата. Укажите дату в формате ГГГГ-ММ-ДД.
+        </p>
+    {% elif due_date %}
+        <h2 class="h5">Срок не позже {{ due_date }}</h2>
+
+        {% for task in tasks %}
+            {% include "task_pages/includes/task_card.html" %}
+        {% empty %}
+            <p>На выбранную дату подходящих задач нет.</p>
+        {% endfor %}
+    {% endif %}
+{% endblock %}
