@@ -1,0 +1,9 @@
+Объектов: 6
+Без select_related: 7 запросов
+С select_related: 1 запросов
+SQL оптимизированной выборки:
+SELECT "task_pages_task"."id", "task_pages_task"."name", "task_pages_task"."category_id", "task_pages_task"."deadline", "task_pages_task"."status", "task_pages_task"."slug", "task_pages_task"."deadline_year", "task_pages_category"."id", "task_pages_category"."name" FROM "task_pages_task" INNER JOIN "task_pages_category" ON ("task_pages_task"."category_id" = "task_pages_category"."id") ORDER BY "task_pages_task"."deadline" ASC, "task_pages_task"."id" ASC LIMIT 20
+План выполнения:
+5 0 208 SCAN task_pages_task USING INDEX task_pages_task_category_id_62c16cc0
+8 0 45 SEARCH task_pages_category USING INTEGER PRIMARY KEY (rowid=?)
+23 0 0 USE TEMP B-TREE FOR ORDER BY

@@ -1,0 +1,23 @@
+SQL-запросы из 1 соединения
+×
+ default 0,38 ms (4 запроса )
+	Запрос	Временная диаграмма	Время (мс)	Действие
+	+	
+SELECT COUNT(*) AS "__count" FROM "task_pages_task"
+		0,08	
+Sel Expl
+
+	+	
+SELECT COUNT(*) AS "__count" FROM "task_pages_task" WHERE "task_pages_task"."status" = 'active'
+		0,10	
+Sel Expl
+
+	+	
+SELECT ••• FROM "task_pages_category" ORDER BY "task_pages_category"."name" ASC
+		0,09	
+Sel Expl
+
+	+	
+SELECT ••• FROM "task_pages_task" INNER JOIN "task_pages_category" ON ("task_pages_task"."category_id" = "task_pages_category"."id") ORDER BY "task_pages_task"."deadline" ASC, "task_pages_task"."id" ASC LIMIT 6
+		0,10	
+Sel Expl
