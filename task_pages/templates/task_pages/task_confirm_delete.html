@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Удаление задачи - Трекер домашних задач{% endblock %}
+{% block content %}
+    <h1>Удалить задачу?</h1>
+    <p>Задача «{{ task.name }}» будет удалена. Это действие нельзя отменить.</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Подтвердить удаление</button>
+        <a href="{{ task.get_absolute_url }}">Вернуться к задаче</a>
+    </form>
+{% endblock %}

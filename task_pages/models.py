@@ -50,6 +50,10 @@ class Task(models.Model):
         Category, on_delete=models.PROTECT, related_name="tasks",
         verbose_name="Категория",
     )
+    description = models.TextField("Описание", blank=True)
+    image = models.ImageField(
+        "Изображение", upload_to="tasks/%Y/%m/", blank=True,
+    )
     deadline = models.DateField("Срок выполнения")
     status = models.CharField(
         "Статус", max_length=10, choices=Status.choices, default=Status.ACTIVE,

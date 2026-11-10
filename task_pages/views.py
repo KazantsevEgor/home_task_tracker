@@ -1,43 +1,28 @@
-from datetime import date
-
+from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, F, Min, Q
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_http_methods, require_POST
 from django.utils import timezone
 
+from .forms import DueDateForm, SORTS, TaskFilterForm, TaskForm
 from .models import Category, Task
 
 
-SORTS = {
-    "deadline": ("deadline", "id"),
-    "-deadline": ("-deadline", "id"),
-    "name": ("name", "id"),
-    "category": ("category__name", "deadline", "id"),
-}
-SORT_LABELS = {
-    "deadline": "Сначала ближайшие сроки",
-    "-deadline": "Сначала дальние сроки",
-    "name": "По названию",
-    "category": "По категории",
-}
-
-
+@require_http_methods(["GET"])
 def tasks(request):
-    category = request.GET.get("category", "")
-    status = request.GET.get("status", "")
-    query = request.GET.get("q", "").strip()
-    search_in = request.GET.get("search_in", "all")
-    due_date = request.GET.get("date", "")
-    sort = request.GET.get("sort", "deadline")
-    if sort not in SORTS:
-        sort = "deadline"
-    if status not in ("active", "completed", "cancelled", "overdue"):
-        status = ""
-    if search_in not in ("all", "name"):
-        search_in = "all"
+    form = TaskFilterForm(request.GET or None)
+    data = {}
     tasks_list = Task.objects.with_category()
+    if form.is_bound:
+        if form.is_valid():
+            data = form.cleaned_data
+        else:
+            tasks_list = tasks_list.none()
+    category = data.get("category")
     if category:
-        tasks_list = tasks_list.filter(category__name=category)
+        tasks_list = tasks_list.filter(category=category)
+    status = data.get("status")
     if status == "active":
         tasks_list = tasks_list.active()
     elif status == "completed":
@@ -46,40 +31,28 @@ def tasks(request):
         tasks_list = tasks_list.cancelled()
     elif status == "overdue":
         tasks_list = tasks_list.overdue()
-    if query:
-        if search_in == "name":
-            tasks_list = tasks_list.filter(name__icontains=query)
+    if data.get("q"):
+        if data.get("search_in") == "name":
+            tasks_list = tasks_list.filter(name__icontains=data["q"])
         else:
             tasks_list = tasks_list.filter(
-                Q(name__icontains=query) | Q(category__name__icontains=query)
+                Q(name__icontains=data["q"])
+                | Q(category__name__icontains=data["q"])
             )
-    invalid_date = False
-    if due_date:
-        try:
-            parsed_date = date.fromisoformat(due_date)
-        except ValueError:
-            invalid_date = True
-            tasks_list = tasks_list.none()
-        else:
-            tasks_list = tasks_list.filter(deadline__lte=parsed_date)
+    if data.get("date"):
+        tasks_list = tasks_list.filter(deadline__lte=data["date"])
+    if data.get("from_date"):
+        tasks_list = tasks_list.filter(deadline__gte=data["from_date"])
+    sort = data.get("sort") or "deadline"
     page = Paginator(tasks_list.order_by(*SORTS[sort]), 10).get_page(
         request.GET.get("page")
     )
     params = request.GET.copy()
     params.pop("page", None)
     return render(request, "task_pages/task_list.html", {
-        "tasks": page.object_list,
-        "page_obj": page,
-        "query_params": params.urlencode(),
-        "categories": Category.objects.order_by("name"),
-        "selected_category": category,
-        "selected_status": status,
-        "q": query,
-        "search_in": search_in,
-        "due_date": due_date,
-        "invalid_date": invalid_date,
-        "sort": sort,
-        "sort_options": SORT_LABELS.items(),
+        "form": form, "tasks": page.object_list, "page_obj": page,
+        "query_params": params.urlencode(), "selected_category": category,
+        "sort": sort, "invalid_date": bool(form.errors.get("date")),
     })
 
 
@@ -109,21 +82,16 @@ def active_tasks(request):
 
 
 def tasks_due(request):
-    due_date = request.GET.get("date")
+    form = DueDateForm(request.GET or None)
     tasks_list = Task.objects.none()
-    invalid_date = False
-    if due_date:
-        try:
-            parsed_date = date.fromisoformat(due_date)
-        except ValueError:
-            invalid_date = True
-        else:
-            tasks_list = Task.objects.with_category().due_by(
-                parsed_date,
-            ).order_by("deadline", "id")
+    if form.is_bound and form.is_valid():
+        tasks_list = Task.objects.with_category().due_by(
+            form.cleaned_data["date"],
+        ).order_by("deadline", "id")
     return render(request, "task_pages/tasks_due.html", {
-        "tasks": tasks_list, "due_date": due_date,
-        "invalid_date": invalid_date,
+        "form": form, "tasks": tasks_list,
+        "due_date": request.GET.get("date"),
+        "invalid_date": bool(form.errors),
     })
 
 
@@ -158,3 +126,58 @@ def statistics(request):
         "busy_categories": busy_categories,
         "empty_categories": empty_categories,
     })
+
+
+@require_http_methods(["GET", "POST"])
+def task_create(request):
+    form = TaskForm(
+        request.POST if request.method == "POST" else None,
+        request.FILES if request.method == "POST" else None,
+    )
+    if request.method == "POST" and form.is_valid():
+        task = form.save()
+        messages.success(request, "Задача создана.")
+        return redirect(task)
+    return render(request, "task_pages/task_form.html", {"form": form})
+
+
+@require_http_methods(["GET", "POST"])
+def task_edit(request, task_id):
+    task = get_object_or_404(Task, pk=task_id)
+    form = TaskForm(
+        request.POST if request.method == "POST" else None,
+        request.FILES if request.method == "POST" else None,
+        instance=task,
+    )
+    if request.method == "POST" and form.is_valid():
+        task = form.save()
+        messages.success(request, "Изменения сохранены.")
+        return redirect(task)
+    return render(request, "task_pages/task_form.html", {
+        "form": form, "task": task,
+    })
+
+
+@require_POST
+def task_cancel(request, task_id):
+    task = get_object_or_404(Task, pk=task_id)
+    changed = Task.objects.active().filter(pk=task.pk).update(
+        status=Task.Status.CANCELLED,
+    )
+    if changed:
+        messages.success(request, "Задача отменена.")
+    else:
+        messages.info(request, "Отменить можно только активную задачу.")
+    return redirect(task)
+
+
+@require_http_methods(["GET", "POST"])
+def task_delete(request, task_id):
+    task = get_object_or_404(Task, pk=task_id)
+    if request.method == "POST":
+        task.delete()
+        messages.success(request, "Задача удалена.")
+        return redirect("tasks:list")
+    return render(
+        request, "task_pages/task_confirm_delete.html", {"task": task},
+    )

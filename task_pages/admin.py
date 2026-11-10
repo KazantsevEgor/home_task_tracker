@@ -47,7 +47,7 @@ class TaskAdmin(admin.ModelAdmin):
     readonly_fields = ("slug", "deadline_year")
     autocomplete_fields = ("category",)
     fieldsets = (
-        (None, {"fields": ("name", "category")}),
+        (None, {"fields": ("name", "category", "description", "image")}),
         ("Выполнение", {"fields": ("deadline", "status")}),
         ("Вычисляемые значения", {"fields": ("slug", "deadline_year")}),
     )

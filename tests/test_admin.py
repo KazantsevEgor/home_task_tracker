@@ -58,7 +58,9 @@ class AdminTests(TestCase):
         self.assertEqual(response.status_code, 302)
         task.refresh_from_db()
         self.assertEqual(task.status, Task.Status.CANCELLED)
-        self.assertNotContains(self.client.get("/tasks/active/"), "Admin CRUD")
+        self.assertNotIn(
+            task, self.client.get("/tasks/active/").context["tasks"],
+        )
         self.assertContains(self.client.get(task.get_absolute_url()),
                             "Задача отменена")
         response = self.client.post(reverse(

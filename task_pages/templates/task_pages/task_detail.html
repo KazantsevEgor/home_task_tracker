@@ -16,6 +16,22 @@
                     {{ task.name|default:"Без названия" }}
                 </h1>
 
+                <div class="mb-3">
+                    <a class="btn btn-primary" href="{% url 'tasks:edit' task.id %}">Редактировать</a>
+                    <a class="btn btn-outline-danger" href="{% url 'tasks:delete' task.id %}">Удалить</a>
+                    {% if task.status == 'active' %}
+                        <form method="post" action="{% url 'tasks:cancel' task.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-secondary">Отменить задачу</button>
+                        </form>
+                    {% endif %}
+                </div>
+                <p>{{ task.description|linebreaksbr }}</p>
+                {% if task.image %}
+                    <img src="{{ task.image.url }}" alt="{{ task.name }}" class="img-fluid mb-3" style="max-height: 400px">
+                {% else %}
+                    <p>Изображение не загружено.</p>
+                {% endif %}
                 <p class="card-text">
                     <strong>ID:</strong> {{ task.id }}
                 </p>

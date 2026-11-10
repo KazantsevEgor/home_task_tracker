@@ -13,13 +13,7 @@
     </p>
 
     <form method="get" action="{% url 'tasks:due' %}" class="mb-4">
-        <label for="date">Дата:</label>
-        <input
-            type="date"
-            id="date"
-            name="date"
-            value="{{ due_date|default_if_none:'' }}"
-        >
+        {% include "task_pages/includes/form_fields.html" %}
         <button type="submit" class="btn btn-primary btn-sm">Найти</button>
     </form>
 

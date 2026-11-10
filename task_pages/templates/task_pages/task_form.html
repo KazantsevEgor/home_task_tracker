@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{% if task %}Редактирование{% else %}Новая задача{% endif %} - Трекер домашних задач{% endblock %}
+{% block content %}
+    <h1>{% if task %}Редактирование задачи{% else %}Новая задача{% endif %}</h1>
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        {% include "task_pages/includes/form_fields.html" %}
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        {% if task %}
+            <a href="{{ task.get_absolute_url }}">Вернуться к задаче</a>
+        {% else %}
+            <a href="{% url 'tasks:list' %}">К списку задач</a>
+        {% endif %}
+    </form>
+{% endblock %}

@@ -24,6 +24,9 @@
     </header>
 
     <main class="container">
+        {% for message in messages %}
+            <div class="alert alert-info" role="status">{{ message }}</div>
+        {% endfor %}
         {% block content %}
         {% endblock %}
     </main>
