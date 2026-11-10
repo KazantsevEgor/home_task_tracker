@@ -38,7 +38,7 @@ def test_navigation_links_are_built_by_url_tag():
     assert "{%" not in html
 
 
-def test_task_list_shows_data_from_sqlite():
+def test_task_list_shows_data_from_orm():
     response = client.get("/tasks/")
     html = response.content.decode()
     assert response.status_code == 200
@@ -65,7 +65,7 @@ def test_category_parameter_is_not_inserted_into_sql():
     assert "Задачи не найдены." in html
 
 
-def test_status_badges_come_from_sql_columns():
+def test_status_badges_come_from_model():
     assert "task-status-overdue" in get_html("/tasks/1/")
     assert "task-status-completed" in get_html("/tasks/2/")
     assert "task-status-active" in get_html("/tasks/5/")

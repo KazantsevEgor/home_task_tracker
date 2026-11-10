@@ -45,4 +45,10 @@
     >
         &larr; к списку задач
     </a>
+    {% if related_tasks %}
+        <h2 class="h5 mt-4">Другие задачи этой категории</h2>
+        {% for related in related_tasks %}
+            <p><a href="{% url 'tasks:detail' related.id %}">{{ related.name }}</a></p>
+        {% endfor %}
+    {% endif %}
 {% endblock %}

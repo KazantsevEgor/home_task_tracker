@@ -1,3 +1,147 @@
+# Трекер домашних задач — ПР9
+
+Текущая веб-версия использует Django ORM и SQLite `db.sqlite3`.
+Консольная версия предыдущих работ продолжает работать с JSON.
+
+## Запуск текущей версии
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python manage.py migrate
+python manage.py import_legacy
+python manage.py runserver
+```
+
+Открыть http://127.0.0.1:8000/. Исходная база ПР7 — `data/tracker.sqlite`.
+`import_legacy` читает её в режиме read-only и переносит 3 категории и 6 задач
+в таблицы Django с сохранением ID. Параметр `--source путь.sqlite` позволяет
+указать другой источник. Повторный запуск проверяет совпадение существующих
+записей, при конфликте прекращается без перезаписи пользовательских изменений.
+Весь импорт атомарен: ошибка откатывает внесённые этим запуском записи.
+После начала редактирования данных повторный импорт может сообщить о конфликте;
+для обычного запуска сайта повторять его не нужно.
+
+Перед переходом сохранены локальные копии `data/tracker_backup_pr9.sqlite`
+и `data/django_backup_pr9.sqlite` (исключены из Git). Исходная база не менялась.
+`db.sqlite3` уже отслеживалась в репозитории и оставлена как демонстрационная
+база; её можно восстановить с нуля командами миграции и импорта выше.
+
+## Модели и структура
+
+В `task_pages/models.py` находятся:
+
+- `Category`: автоматический ID, уникальное название `CharField(200)`.
+- `Task`: автоматический ID, название `CharField(200)`, `DateField` срока,
+  `BooleanField` выполнения (по умолчанию `False`), `ForeignKey` категории.
+- Связь `Category → Task` — один ко многим; обратная связь `category.tasks`.
+  `PROTECT` запрещает удалять категорию с задачами.
+- `Task.is_overdue` вычисляет просрочку: задача не выполнена и срок меньше
+  текущей даты в часовом поясе проекта. В день дедлайна задача не просрочена.
+
+Миграция: `task_pages/migrations/0001_initial.py`.
+Импорт: `task_pages/management/commands/import_legacy.py`.
+Представления: `task_pages/views.py`; шаблоны: `task_pages/templates/task_pages/`.
+Обычный Python-класс `models/task.py` относится к консольной версии.
+SQL-файлы и `db/` сохранены как материалы ПР7; веб-представления их не вызывают.
+
+## Страницы и управление данными
+
+- `/tasks/`: фильтры категории, статуса, предельной даты; поиск по названию
+  или по названию и категории; сортировки по сроку, названию, категории.
+- Пагинация по 10 задач. Ссылки сохраняют параметры; отправка формы сбрасывает
+  страницу. Счётчик показывает весь отфильтрованный набор.
+- Неизвестная сортировка заменяется стандартной; неверная дата даёт сообщение
+  и пустой результат. Нечисловая страница открывает первую, выход за пределы — последнюю.
+- `/tasks/<id>/`: карточка и до трёх других задач категории; отсутствующий ID даёт 404.
+- `/tasks/active/`: невыполненные задачи; `/tasks/due/?date=2026-12-31`:
+  невыполненные задачи со сроком не позже даты.
+- `/tasks/statistics/`: общее число, выполненные, просроченные, ближайший срок,
+  показатели по всем категориям, категории с несколькими задачами и без задач.
+- `/admin/`: создание, редактирование и удаление задач и категорий через ORM.
+  Для входа создать учётную запись: `python manage.py createsuperuser`.
+
+SQLite `icontains` без дополнительных расширений не гарантирует поиск без учёта
+регистра для кириллицы. Для русских слов следует сохранять регистр исходных данных.
+
+## ORM-запросы для защиты
+
+Ниже перечислены отдельные запросы/варианты запросов, реально используемые
+в представлениях. Один составной запрос считается одной строкой.
+
+| № | Назначение | Реализация |
+|---|---|---|
+| 1 | Список задач со связанными категориями | `Task.objects.select_related("category")` |
+| 2 | Список категорий, сортировка по одному полю | `Category.objects.order_by("name")` |
+| 3 | Фильтр по связанной модели | `filter(category__name=category)` |
+| 4 | Исключение выполненных | `exclude(is_completed=True)` |
+| 5 | Только выполненные | `filter(is_completed=True)` |
+| 6 | Просроченные, два условия | `filter(is_completed=False, deadline__lt=...)` |
+| 7 | Поиск по названию | `filter(name__icontains=query)` |
+| 8 | Поиск по двум полям | `filter(Q(name__icontains=...) \| Q(category__name__icontains=...))` |
+| 9 | Ограничение по сроку | `filter(deadline__lte=parsed_date)` |
+| 10 | Сортировка по нескольким полям и пагинация | `Paginator(tasks_list.order_by(*SORTS[sort]), 10)` |
+| 11 | Одна задача с категорией | `select_related("category").get(pk=task_id)` |
+| 12 | Обратная связь и ограничение выборки | `task.category.tasks.exclude(pk=...).select_related("category")[:3]` |
+| 13 | Невыполненные задачи к дате | `filter(is_completed=False, deadline__lte=...).order_by(...)` |
+| 14 | Сводные показатели | `Task.objects.aggregate(...)` с `Count` и `Q` |
+| 15 | Ближайший срок активной задачи | `filter(is_completed=False).aggregate(Min(...))` |
+| 16 | Число задач в каждой категории | `Category.objects.annotate(...)` |
+| 17 | Категории с несколькими задачами | `by_category.filter(tasks_count__gt=1)` |
+| 18 | Только названия пустых категорий | `filter(tasks__isnull=True).values_list("name", flat=True)` |
+
+Создание, чтение, изменение и удаление можно продемонстрировать в Django shell:
+
+```python
+from datetime import date
+from task_pages.models import Category, Task
+
+category = Category.objects.create(name="Демонстрация ПР9")
+task = Task.objects.create(name="Проверить ORM", category=category,
+                           deadline=date(2030, 1, 1))
+task = Task.objects.get(pk=task.pk)
+task.is_completed = True
+task.save(update_fields=["is_completed"])
+print(list(category.tasks.values("id", "name", "is_completed")))
+task.delete()
+category.delete()
+```
+
+Экспорт и загрузка в совместимую базу после миграций:
+
+```bash
+python manage.py dumpdata task_pages --indent 2 --output /tmp/tracker_fixture.json
+python manage.py loaddata /tmp/tracker_fixture.json
+```
+
+Загрузка fixture может перезаписывать записи с совпадающими ID; выполнять её
+на отдельной тестовой базе или после резервного копирования.
+
+## Проверки ПР9
+
+```bash
+python manage.py check
+python manage.py makemigrations --check --dry-run
+python manage.py showmigrations
+python manage.py sqlmigrate task_pages 0001
+pytest -v
+flake8 . --extend-exclude=venv
+```
+
+Pytest создаёт отдельную тестовую БД и загружает данные ПР7. Проверяются CRUD,
+защита связей, перенос и его откат, сохранение сценариев, поиск, сортировка,
+пагинация, пустые категории и количество запросов списка (без N+1).
+Отчёт: [reports/отчет_ПР9.md](reports/отчет_ПР9.md).
+
+---
+
+## Архив описания ПР1–ПР7
+
+Ниже сохранена документация предыдущих этапов. Описания прямого SQL-доступа
+из представлений и старые команды запуска относятся к ПР7; актуальные команды
+для веб-версии ПР9 приведены выше.
+
 # Трекер домашних задач
 
 Приложение для планирования и контроля выполнения домашних дел.  

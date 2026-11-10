@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 .pytest_cache/.venv/
 .DS_Store
+
+.venv/
+.pytest_cache/
+data/*_backup_pr9.sqlite
