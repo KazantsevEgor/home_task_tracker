@@ -28,6 +28,7 @@
                 <option value="">Все</option>
                 <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Активные</option>
                 <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Выполненные</option>
+                <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>Отменённые</option>
                 <option value="overdue" {% if selected_status == 'overdue' %}selected{% endif %}>Просроченные</option>
             </select>
         </label>

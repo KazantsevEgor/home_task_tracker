@@ -21,6 +21,8 @@
             Ближайший дедлайн активной задачи:
             {{ nearest_deadline|default:"нет активных задач" }}
         </li>
+        <li class="list-group-item">Активных: {{ summary.active_count }}</li>
+        <li class="list-group-item">Отменено: {{ summary.cancelled_count }}</li>
     </ul>
 
     <h2 class="h4">Задачи по категориям</h2>

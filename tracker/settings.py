@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -65,6 +67,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'task_pages.context_processors.tracker_context',
             ],
         },
     },
@@ -136,3 +139,14 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Панель отладки только для локальной разработки, без влияния на тесты.
+TESTING = "test" in sys.argv or "pytest" in sys.modules
+DEBUG_TOOLBAR_ENABLED = DEBUG and not TESTING and (
+    os.environ.get("DJANGO_DEBUG_TOOLBAR", "1") == "1"
+)
+if DEBUG_TOOLBAR_ENABLED:
+    INSTALLED_APPS += ["debug_toolbar"]
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+INTERNAL_IPS = ["127.0.0.1", "::1"]

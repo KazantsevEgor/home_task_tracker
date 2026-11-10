@@ -2,6 +2,8 @@
     <span class="badge bg-success task-status task-status-completed">
         Задача выполнена
     </span>
+{% elif task.status == 'cancelled' %}
+    <span class="badge bg-secondary task-status task-status-cancelled">Задача отменена</span>
 {% elif task.is_overdue %}
     <span class="badge bg-danger task-status task-status-overdue">
         Задача просрочена

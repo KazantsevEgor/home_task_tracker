@@ -8,3 +8,7 @@ __pycache__/
 .venv/
 .pytest_cache/
 data/*_backup_pr9.sqlite
+
+data/*_backup_pr10.sqlite
+db.sqlite3
+.local_admin_credentials

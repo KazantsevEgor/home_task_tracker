@@ -5,3 +5,4 @@
     <a class="nav-link" href="{% url 'tasks:due' %}">Задачи по сроку</a>
     <a class="nav-link" href="{% url 'tasks:statistics' %}">Статистика</a>
 </nav>
+<p class="text-muted">{{ tracker_name }} · Активных задач: {{ tracker_active_count }}</p>

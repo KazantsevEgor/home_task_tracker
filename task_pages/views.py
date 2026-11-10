@@ -31,21 +31,21 @@ def tasks(request):
     sort = request.GET.get("sort", "deadline")
     if sort not in SORTS:
         sort = "deadline"
-    if status not in ("active", "completed", "overdue"):
+    if status not in ("active", "completed", "cancelled", "overdue"):
         status = ""
     if search_in not in ("all", "name"):
         search_in = "all"
-    tasks_list = Task.objects.select_related("category")
+    tasks_list = Task.objects.with_category()
     if category:
         tasks_list = tasks_list.filter(category__name=category)
     if status == "active":
-        tasks_list = tasks_list.exclude(is_completed=True)
+        tasks_list = tasks_list.active()
     elif status == "completed":
-        tasks_list = tasks_list.filter(is_completed=True)
+        tasks_list = tasks_list.completed()
+    elif status == "cancelled":
+        tasks_list = tasks_list.cancelled()
     elif status == "overdue":
-        tasks_list = tasks_list.filter(
-            is_completed=False, deadline__lt=timezone.localdate(),
-        )
+        tasks_list = tasks_list.overdue()
     if query:
         if search_in == "name":
             tasks_list = tasks_list.filter(name__icontains=query)
@@ -83,9 +83,11 @@ def tasks(request):
     })
 
 
-def task_detail(request, task_id):
+def task_detail(request, task_id=None, slug=None):
     try:
-        task = Task.objects.select_related("category").get(pk=task_id)
+        task = Task.objects.with_category().get(
+            **({"slug": slug} if slug is not None else {"pk": task_id})
+        )
     except Task.DoesNotExist:
         task = None
     related_tasks = (
@@ -98,9 +100,9 @@ def task_detail(request, task_id):
 
 
 def active_tasks(request):
-    tasks_list = Task.objects.select_related("category").exclude(
-        is_completed=True,
-    ).order_by("deadline", "id")
+    tasks_list = Task.objects.with_category().active().order_by(
+        "deadline", "id",
+    )
     return render(
         request, "task_pages/active_tasks.html", {"tasks": tasks_list},
     )
@@ -116,8 +118,8 @@ def tasks_due(request):
         except ValueError:
             invalid_date = True
         else:
-            tasks_list = Task.objects.select_related("category").filter(
-                is_completed=False, deadline__lte=parsed_date,
+            tasks_list = Task.objects.with_category().due_by(
+                parsed_date,
             ).order_by("deadline", "id")
     return render(request, "task_pages/tasks_due.html", {
         "tasks": tasks_list, "due_date": due_date,
@@ -128,18 +130,22 @@ def tasks_due(request):
 def statistics(request):
     summary = Task.objects.aggregate(
         total_count=Count("id"),
-        completed_count=Count("id", filter=Q(is_completed=True)),
+        active_count=Count("id", filter=Q(status=Task.Status.ACTIVE)),
+        cancelled_count=Count("id", filter=Q(status=Task.Status.CANCELLED)),
+        completed_count=Count("id", filter=Q(status=Task.Status.COMPLETED)),
         overdue_count=Count("id", filter=Q(
-            is_completed=False, deadline__lt=timezone.localdate(),
+            status=Task.Status.ACTIVE, deadline__lt=timezone.localdate(),
         )),
     )
-    nearest = Task.objects.filter(is_completed=False).aggregate(
+    nearest = Task.objects.active().aggregate(
         nearest_deadline=Min("deadline"),
     )
     by_category = Category.objects.annotate(
         category_name=F("name"),
         tasks_count=Count("tasks"),
-        completed_count=Count("tasks", filter=Q(tasks__is_completed=True)),
+        completed_count=Count(
+            "tasks", filter=Q(tasks__status=Task.Status.COMPLETED),
+        ),
     ).order_by("-tasks_count", "name")
     busy_categories = by_category.filter(tasks_count__gt=1)
     empty_categories = Category.objects.filter(tasks__isnull=True).values_list(

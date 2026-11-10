@@ -45,6 +45,7 @@
     >
         &larr; к списку задач
     </a>
+    {% if task %}<p><a href="{{ task.get_absolute_url }}">Постоянная ссылка на задачу</a></p>{% endif %}
     {% if related_tasks %}
         <h2 class="h5 mt-4">Другие задачи этой категории</h2>
         {% for related in related_tasks %}

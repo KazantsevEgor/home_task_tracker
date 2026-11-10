@@ -48,7 +48,8 @@ class Command(BaseCommand):
                     self.copy_object(Task, pk, {
                         "name": name, "category_id": category_id,
                         "deadline": date.fromisoformat(deadline),
-                        "is_completed": bool(completed),
+                        "status": (Task.Status.COMPLETED if completed
+                                   else Task.Status.ACTIVE),
                     })
         except (sqlite3.Error, ValueError, TypeError,
                 ValidationError, IntegrityError) as error:

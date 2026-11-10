@@ -22,8 +22,8 @@ class ORMTests(TestCase):
         )
         self.assertEqual(category.tasks.get(pk=task.pk), task)
         self.assertFalse(task.is_completed)
-        task.is_completed = True
-        task.save(update_fields=["is_completed"])
+        task.status = Task.Status.COMPLETED
+        task.save(update_fields=["status"])
         task.refresh_from_db()
         self.assertTrue(task.is_completed)
         with self.assertRaises(ProtectedError):
@@ -35,11 +35,11 @@ class ORMTests(TestCase):
 
     def test_overdue_boundary(self):
         today = timezone.localdate()
-        task = Task(deadline=today, is_completed=False)
+        task = Task(deadline=today)
         self.assertFalse(task.is_overdue)
         task.deadline = today - timedelta(days=1)
         self.assertTrue(task.is_overdue)
-        task.is_completed = True
+        task.status = Task.Status.COMPLETED
         self.assertFalse(task.is_overdue)
 
     def test_pagination_filter_search_sort(self):
@@ -96,7 +96,7 @@ class ORMTests(TestCase):
         self.assertIn("Пустая", response.context["empty_categories"])
 
     def test_list_queries_do_not_grow_per_task(self):
-        with self.assertNumQueries(3):
+        with self.assertNumQueries(4):
             self.client.get("/tasks/")
 
     def test_import_is_repeatable(self):
@@ -129,7 +129,7 @@ class ORMTests(TestCase):
             self.assertFalse(Category.objects.filter(pk=999).exists())
 
     def test_completed_and_overdue_filters(self):
-        with patch("task_pages.views.timezone.localdate",
+        with patch("task_pages.models.timezone.localdate",
                    return_value=date(2026, 10, 20)):
             response = self.client.get("/tasks/", {"status": "overdue"})
         self.assertTrue(all(
